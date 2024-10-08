@@ -43,7 +43,7 @@ def read_dataset_for_site_id(site_id):
         return None
 
 # Function to generate chart data for a specific river and date
-def generate_chart_for_river_and_date(river_name, site_id, selected_date):
+def generate_chart_for_river_and_date(river_name, site_id, selected_date, site_name):
     df = read_dataset_for_site_id(site_id)
     if df is None:
         return "<div>No data available for the selected site.</div>"
@@ -64,10 +64,10 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date):
         ax1.set_xlim(0, 23)
         ax1.set_xlabel('Time (hours)')
         ax1.set_xticks(range(0,24))
-        ax1.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):02d}'))  # Format labels as '01', '02', etc.
+        ax1.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):02d}'))  # Format time labels as '01', '02', etc.
 
         # Setting graph title
-        ax1.set_title(f'Data for {site_id} ({river_name} River basin) on {selected_date}')
+        ax1.set_title(f'Data for {site_name} ({site_id} in {river_name} River basin) on {selected_date}')
 
         # These variables to be used to set left y-axis title
         heightAvail = 0
@@ -76,13 +76,14 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date):
         # Graphing height data if available
         if 'Height' in df_filtered.columns:
             height_data = df_filtered['Height']
-            ax1.plot(time_points, height_data, color='g', linewidth=2, marker='o', label=f'Water Height (m)')
+            ax1.plot(time_points, height_data, color='darkgreen', linewidth=2, marker='o', label='Water Height (m)')
             heightAvail = 1
 
         # Graphing rainfall data if available
         if 'Rainfall' in df_filtered.columns:
             rainfall_data = df_filtered['Rainfall']
-            ax1.plot(time_points, rainfall_data, color='b', linewidth=2, marker='o', label=f'Rainfall (mm)')
+            # ax3 = ax1.twinx()
+            ax1.plot(time_points, rainfall_data, color='darkblue', linewidth=2, marker='o', label='Rainfall (mm)')
             rainAvail = 2
 
         # Scaling left y-axis and drawing legend
@@ -90,7 +91,7 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date):
             ax1.autoscale_view()
             ax1.legend(loc='upper left')
 
-        # Setting left y-axis title
+        # # Setting left y-axis title
         if (heightAvail + rainAvail == 1):
             ax1.set_ylabel('Water Height (m)')
         elif (heightAvail + rainAvail == 2):
@@ -102,8 +103,7 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date):
         if 'Flow' in df_filtered.columns:
             flow_data = df_filtered['Flow']
             ax2 = ax1.twinx()
-            ax2.plot(time_points, flow_data, color='r', linewidth=2, marker='o', label=f'Water Flow (cfs)')
-            ax2.set_ylabel('Water Flow (cfs)')
+            ax2.plot(time_points, flow_data, color='darkmagenta', linewidth=2, marker='o', label='Water Flow (ML/day)')
             ax2.autoscale_view()
             ax2.legend(loc='upper right')
 
@@ -130,7 +130,8 @@ def index():
         river_group = folium.FeatureGroup(name=f"<span style='color:{river_info["color"]};'>{river_name}</span>")
         for location in river_info["locations"]:
             site_id = location["SiteID"]
-            popup_html = generate_chart_for_river_and_date(river_name, site_id, selected_date)
+            site_name = location["Location"]
+            popup_html = generate_chart_for_river_and_date(river_name, site_id, selected_date, site_name)
             folium.Marker(
                 location=[location["Latitude"], location["Longitude"]],
                 popup=folium.Popup(popup_html, max_width=600),
@@ -139,7 +140,8 @@ def index():
         river_group.add_to(victoria_map)
         print(f"Data successfully processed for {river_name} River")
 
-    print("Total river basins in processed data: " + len(rivers_data.items()))
+    total = len(rivers_data.items())
+    print(f"Total river basins in processed data: {total}")
 
     all_coords = [loc for river_info in rivers_data.values() for loc in river_info["locations"]]
     if all_coords:
