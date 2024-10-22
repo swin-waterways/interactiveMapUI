@@ -65,6 +65,7 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date, site_n
         ax1.set_xlabel('Time (hours)')
         ax1.set_xticks(range(0,24))
         ax1.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):02d}'))  # Format time labels as '01', '02', etc.
+        ax1.grid(axis='x')
 
         # Twin x-axis plots for flow and rainfall
         ax2 = ax1.twinx()
@@ -85,6 +86,8 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date, site_n
             ax1.autoscale_view()
             ax1.set_ylabel('Water Height (m)')
             height = True
+        else:
+            ax1.axis('off')
 
         # Graphing flow data if available
         if 'Flow' in df_filtered.columns:
@@ -93,6 +96,8 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date, site_n
             ax2.autoscale_view()
             ax2.set_ylabel('Water Flow (ML/day)')
             flow = True
+        else:
+            ax2.axis('off')
 
         # Graphing rainfall data if available
         if 'Rainfall' in df_filtered.columns:
@@ -103,7 +108,7 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date, site_n
             ax3.set_ylabel('Rainfall (mm)')  
             rainfall = True
         else:
-            ax3.set(yticklabels=[])
+            ax3.axis('off')
 
     # Setting legend locations based on available data
     if (height & flow & rainfall):   
@@ -156,7 +161,7 @@ def index():
             ).add_to(river_group)
         river_group.add_to(victoria_map)
         # Prints to console as rendering progresses
-        print(f"Data successfully processed for {river_name} River")
+        print(f"Data successfully processed for {river_name}")
 
     # Prints to console once rendering complete
     total = len(rivers_data.items())
