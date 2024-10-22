@@ -59,53 +59,72 @@ def generate_chart_for_river_and_date(river_name, site_id, selected_date, site_n
         # Reading times
         time_points = df_filtered['Time']
         # Drawing plot
-        fig, ax1 = plt.subplots(figsize=(10, 6))
+        fig, ax1 = plt.subplots(figsize=(10, 6), layout='constrained')
         # Setting/labelling x-axis as 0-23 hours
         ax1.set_xlim(0, 23)
         ax1.set_xlabel('Time (hours)')
         ax1.set_xticks(range(0,24))
         ax1.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):02d}'))  # Format time labels as '01', '02', etc.
+        ax1.grid(axis='x')
+
+        # Twin x-axis plots for flow and rainfall
+        ax2 = ax1.twinx()
+        ax3 = ax1.twinx()
 
         # Setting graph title
         ax1.set_title(f'Data for {site_name} ({site_id} in {river_name} River basin) on {selected_date}')
 
-        # These variables to be used to set left y-axis title
-        heightAvail = 0
-        rainAvail = 0
+        # Variables used to set legend location
+        height = False
+        flow = False
+        rainfall = False
 
         # Graphing height data if available
         if 'Height' in df_filtered.columns:
             height_data = df_filtered['Height']
-            ax1.plot(time_points, height_data, color='darkgreen', linewidth=2, marker='o', label='Water Height (m)')
-            heightAvail = 1
-
-        # Graphing rainfall data if available
-        if 'Rainfall' in df_filtered.columns:
-            rainfall_data = df_filtered['Rainfall']
-            # ax3 = ax1.twinx()
-            ax1.plot(time_points, rainfall_data, color='darkblue', linewidth=2, marker='o', label='Rainfall (mm)')
-            rainAvail = 2
-
-        # Scaling left y-axis and drawing legend
-        if (heightAvail + rainAvail != 0):
+            p1 = ax1.plot(time_points, height_data, color='darkgreen', linewidth=2, marker='o', label='Water Height (m)')
             ax1.autoscale_view()
-            ax1.legend(loc='upper left')
-
-        # # Setting left y-axis title
-        if (heightAvail + rainAvail == 1):
             ax1.set_ylabel('Water Height (m)')
-        elif (heightAvail + rainAvail == 2):
-            ax1.set_ylabel('Rainfall (mm)')
-        elif (heightAvail + rainAvail == 3):
-            ax1.set_ylabel('Rainfall (mm) / Water Height (m)')
+            height = True
+        else:
+            ax1.axis('off')
 
         # Graphing flow data if available
         if 'Flow' in df_filtered.columns:
             flow_data = df_filtered['Flow']
-            ax2 = ax1.twinx()
-            ax2.plot(time_points, flow_data, color='darkmagenta', linewidth=2, marker='o', label='Water Flow (ML/day)')
+            p2 = ax2.plot(time_points, flow_data, color='darkmagenta', linewidth=2, marker='o', label='Water Flow (ML/day)')
             ax2.autoscale_view()
-            ax2.legend(loc='upper right')
+            ax2.set_ylabel('Water Flow (ML/day)')
+            flow = True
+        else:
+            ax2.axis('off')
+
+        # Graphing rainfall data if available
+        if 'Rainfall' in df_filtered.columns:
+            rainfall_data = df_filtered['Rainfall']
+            p3 = ax3.plot(time_points, rainfall_data, color='darkblue', linewidth=2, marker='o', label='Rainfall (mm)')
+            ax3.spines['right'].set_position(('outward', 60))
+            ax3.autoscale_view()   
+            ax3.set_ylabel('Rainfall (mm)')  
+            rainfall = True
+        else:
+            ax3.axis('off')
+
+    # Setting legend locations based on available data
+    if (height & flow & rainfall):   
+        ax1.legend(handles=p1+p2+p3, loc='best')
+    elif (flow & rainfall):
+        ax1.legend(handles=p2+p3, loc='best')  
+    elif (height & flow):
+        ax1.legend(handles=p1+p2, loc='best')
+    elif (height & rainfall):
+        ax1.legend(handles=p1+p3, loc='best')
+    elif (height):
+        ax1.legend(handles=p1, loc='best')
+    elif (flow):
+        ax1.legend(handles=p2, loc='best')
+    elif (rainfall):
+        ax1.legend(handles=p3, loc='best')
 
     # Saving the image to buffer
     buffer = BytesIO()
@@ -124,8 +143,10 @@ app = Flask(__name__)
 def index():
     selected_date = request.form.get('date_input', '2014-08-28')
 
+    # Instantiate map
     victoria_map = folium.Map(location=[-37.4713, 144.7852], zoom_start=7, tiles="OpenStreetMap")
 
+    # Loops through all sites, adds marker to map, generates chart
     for river_name, river_info in rivers_data.items():
         river_group = folium.FeatureGroup(name=f"<span style='color:{river_info["color"]};'>{river_name}</span>")
         for location in river_info["locations"]:
@@ -134,12 +155,15 @@ def index():
             popup_html = generate_chart_for_river_and_date(river_name, site_id, selected_date, site_name)
             folium.Marker(
                 location=[location["Latitude"], location["Longitude"]],
+                tooltip=f"{site_name}",
                 popup=folium.Popup(popup_html, max_width=600),
                 icon=folium.Icon(color=river_info["color"], icon="info-sign"),
             ).add_to(river_group)
         river_group.add_to(victoria_map)
-        print(f"Data successfully processed for {river_name} River")
+        # Prints to console as rendering progresses
+        print(f"Data successfully processed for {river_name}")
 
+    # Prints to console once rendering complete
     total = len(rivers_data.items())
     print(f"Total river basins in processed data: {total}")
 
@@ -149,6 +173,7 @@ def index():
 
     folium.LayerControl().add_to(victoria_map)
 
+    # Date selection
     legend_html = f"""
     <div style="position: fixed; top: 10px; left: 10px; width: 200px; height: 120px;
                 background-color: white; border:2px solid grey; z-index:9999; font-size:12px;
