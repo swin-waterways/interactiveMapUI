@@ -152,11 +152,11 @@ def index():
         for location in river_info["locations"]:
             site_id = location["SiteID"]
             site_name = location["Location"]
-            popup_html = generate_chart_for_river_and_date(river_name, site_id, selected_date, site_name)
+            # popup_html = generate_chart_for_river_and_date(river_name, site_id, selected_date, site_name)
             folium.Marker(
                 location=[location["Latitude"], location["Longitude"]],
-                tooltip=f"{site_name}",
-                popup=folium.Popup(popup_html, max_width=600),
+                tooltip=f"{site_id}",
+                # popup=folium.Popup(popup_html, max_width=600),
                 icon=folium.Icon(color=river_info["color"], icon="info-sign"),
             ).add_to(river_group)
         river_group.add_to(victoria_map)
