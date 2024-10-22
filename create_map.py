@@ -138,8 +138,10 @@ app = Flask(__name__)
 def index():
     selected_date = request.form.get('date_input', '2014-08-28')
 
+    # Instantiate map
     victoria_map = folium.Map(location=[-37.4713, 144.7852], zoom_start=7, tiles="OpenStreetMap")
 
+    # Loops through all sites, adds marker to map, generates chart
     for river_name, river_info in rivers_data.items():
         river_group = folium.FeatureGroup(name=f"<span style='color:{river_info["color"]};'>{river_name}</span>")
         for location in river_info["locations"]:
@@ -148,12 +150,15 @@ def index():
             popup_html = generate_chart_for_river_and_date(river_name, site_id, selected_date, site_name)
             folium.Marker(
                 location=[location["Latitude"], location["Longitude"]],
+                tooltip=f"{site_name}",
                 popup=folium.Popup(popup_html, max_width=600),
                 icon=folium.Icon(color=river_info["color"], icon="info-sign"),
             ).add_to(river_group)
         river_group.add_to(victoria_map)
+        # Prints to console as rendering progresses
         print(f"Data successfully processed for {river_name} River")
 
+    # Prints to console once rendering complete
     total = len(rivers_data.items())
     print(f"Total river basins in processed data: {total}")
 
@@ -163,6 +168,7 @@ def index():
 
     folium.LayerControl().add_to(victoria_map)
 
+    # Date selection
     legend_html = f"""
     <div style="position: fixed; top: 10px; left: 10px; width: 200px; height: 120px;
                 background-color: white; border:2px solid grey; z-index:9999; font-size:12px;
